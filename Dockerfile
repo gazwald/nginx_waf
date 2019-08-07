@@ -14,8 +14,8 @@ RUN mkdir -p /var/log/nginx && chown nginx:nginx /var/log/nginx
 RUN mkdir -p /var/cache/nginx && chown nginx:nginx /var/cache/nginx
 
 # Download $nginx_version
-RUN wget -O /tmp/release-$nginx_version.tar.gz https://github.com/nginx/nginx/archive/release-$nginx_version.tar.gz
-RUN tar xf /tmp/release-$nginx_version.tar.gz -C /tmp/
+RUN wget -O /tmp/release-$nginx_version.tar.gz https://github.com/nginx/nginx/archive/release-$nginx_version.tar.gz \
+    && tar xf /tmp/release-$nginx_version.tar.gz -C /tmp/
 
 # Clone ModSecurity-nginx module
 RUN git clone --depth 1 -b master https://github.com/SpiderLabs/ModSecurity-nginx.git /tmp/ModSecurity-nginx
@@ -50,8 +50,8 @@ RUN cd /tmp/nginx-release-$nginx_version \
                         --with-stream \
                         --with-stream_ssl_module \
                         --with-threads \
-    && make modules -j $(nproc) \
-    && make -j $(nproc)\
+    && make -j $(nproc) modules \
+    && make -j $(nproc) \
     && make install
 
 # Copy OWASP Modsecurity CSR into nginx config 
@@ -64,5 +64,15 @@ COPY nginx.conf /usr/local/nginx/conf/nginx.conf
 COPY unicode.mapping /usr/local/nginx/conf/unicode.mapping
 COPY modsecurity.conf /usr/local/nginx/conf/modsecurity.conf
 COPY modsec_includes.conf /usr/local/nginx/conf/modsec_includes.conf
+
+# Clean up yum cache
+RUN yum clean all
+
+# Clean up tmp
+RUN rm -rf /tmp/release-$nginx_version.tar.gz \
+    && rm -rf /tmp/release-$nginx_version \
+    && rm -rf /tmp/ModSecurity-nginx \
+    && rm -rf /tmp/ModSecurity \
+    && rm -rf /tmp/owasp-modsecurity-crs
 
 CMD [ "/usr/local/nginx/sbin/nginx", "-g", "daemon off;" ]
